@@ -37,14 +37,14 @@ pub fn args<'a>() -> ArgMatches<'a> {
                 .value_name("SHA3")
                 .help("SHA3 checksum")
                 .takes_value(true),
-        ).group(ArgGroup::with_name("hash")
+        ).group(
+            ArgGroup::with_name("hash")
                 .args(&["md5", "sha1", "sha2", "sha3"])
-                .required(true)
+                .required(true),
         ).arg(
             Arg::with_name("URL")
                 .help("Script to run")
                 .required(true)
                 .index(1),
-        )
-        .get_matches()
+        ).get_matches()
 }

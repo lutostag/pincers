@@ -9,13 +9,9 @@ The SHA-1 and MD5 hashes are included so as to work with all widely used hashes.
 
 
 ## Examples
-```
-$ pincers --sha3 962309203a6dd66167d09558326176175894cdd0809edb950442c910cee868a2 https://sh.rustup.rs
-
-```
-```
-$ pincers --sha2 bb7e8f51023ab8b054c6578591fa0dc361ceeb08744e5cd1f0e551235c4912b2 https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh
-```
+`$ pincers --sha3 962309203a6dd66167d09558326176175894cdd0809edb950442c910cee868a2 https://sh.rustup.rs
+`
+`$ pincers --sha2 bb7e8f51023ab8b054c6578591fa0dc361ceeb08744e5cd1f0e551235c4912b2 https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh`
 
 ## Usage
 ```

@@ -46,9 +46,10 @@ fn run(downloaded: &Vec<u8>) {
 
     {
         let stdin = child.stdin.as_mut().expect("Failed to open stdin");
-        stdin.write_all(downloaded).expect("Failed to write to stdin");
+        stdin
+            .write_all(downloaded)
+            .expect("Failed to write to stdin");
     }
-
 }
 
 fn main() -> Result<(), String> {
@@ -64,7 +65,10 @@ fn main() -> Result<(), String> {
             let calculated = encode(digest.result());
             println!("Hash of downloaded script: {}", calculated);
             match calculated.eq_ignore_ascii_case(args.value_of("hash").unwrap()) {
-                true => { println!("Hash matches"); run(&body)},
+                true => {
+                    println!("Hash matches");
+                    run(&body)
+                }
                 false => println!("Hash does not match"),
             }
         }
