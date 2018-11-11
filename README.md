@@ -2,6 +2,11 @@
 A more secure way to run scripts from the web
 
 Because `curl | sh` or `wget | sh` is a little to cowboy for the world we live in.
+Use cryptographic hashes to check what is downloaded is what you expect _before_ you run the script.
+
+## Notes
+The SHA-1 and MD5 hashes are included so as to work with all widely used hashes. However, these particular hashes have practical demonstrable attacks and should be avoided if at all possible.
+
 
 ## Examples
 ```
