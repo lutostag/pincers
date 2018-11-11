@@ -1,4 +1,3 @@
-use std::io::Read;
 use digest::DynDigest;
 use md5;
 use sha1;
@@ -19,10 +18,6 @@ fn hex_bits(sum: &str) -> Result<u16, String> {
     } else {
         Ok(sum.len() as u16 * 4)
     }
-}
-
-fn check_sum<D: DynDigest, R: Read>(_digest: D, _sum: &str, _stream: &mut R) -> bool {
-    false
 }
 
 pub fn digest(hash: HashType, sum: &str) -> Result<Box<DynDigest>, String> {

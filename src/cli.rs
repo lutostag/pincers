@@ -1,11 +1,15 @@
 use clap::{App, Arg, ArgGroup, ArgMatches};
-
 pub fn args<'a>() -> ArgMatches<'a> {
     App::new(crate_name!())
         .version(crate_version!())
         .author(crate_authors!())
         .about(crate_description!())
         .arg(
+            Arg::with_name("v")
+                .short("v")
+                .multiple(true)
+                .help("Sets the level of verbosity"),
+        ).arg(
             Arg::with_name("md5")
                 .short("m")
                 .long("md5")
@@ -33,16 +37,14 @@ pub fn args<'a>() -> ArgMatches<'a> {
                 .value_name("SHA3")
                 .help("SHA3 checksum")
                 .takes_value(true),
-        ).arg(
-            Arg::with_name("v")
-                .short("v")
-                .multiple(true)
-                .help("Sets the level of verbosity"),
+        ).group(ArgGroup::with_name("hash")
+                .args(&["md5", "sha1", "sha2", "sha3"])
+                .required(true)
         ).arg(
             Arg::with_name("URL")
                 .help("Script to run")
                 .required(true)
                 .index(1),
-        ).group(ArgGroup::with_name("hash").args(&["md5", "sha1", "sha2", "sha3"]))
+        )
         .get_matches()
 }
