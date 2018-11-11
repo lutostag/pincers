@@ -1,4 +1,5 @@
 use digest::DynDigest;
+use failure::Error;
 use md5;
 use sha1;
 use sha2;
@@ -12,15 +13,15 @@ pub enum HashType {
     SHA3, // bits: 224, 256, 384, 512
 }
 
-fn hex_bits(sum: &str) -> Result<u16, String> {
+fn hex_bits(sum: &str) -> Result<u16, Error> {
     if let Some(c) = sum.chars().find(|c| !c.is_digit(16)) {
-        Err(format!("Non hexdigit {} found in checksum", c))
+        Err(format_err!("Non hexdigit {} found in checksum", c))
     } else {
         Ok(sum.len() as u16 * 4)
     }
 }
 
-pub fn digest(hash: HashType, sum: &str) -> Result<Box<DynDigest>, String> {
+pub fn digest(hash: HashType, sum: &str) -> Result<Box<DynDigest>, Error> {
     let bits = hex_bits(sum)?;
     match (hash, bits) {
         (HashType::MD5, 128) => Ok(Box::new(md5::Md5::default())),
@@ -33,6 +34,6 @@ pub fn digest(hash: HashType, sum: &str) -> Result<Box<DynDigest>, String> {
         (HashType::SHA3, 256) => Ok(Box::new(sha3::Sha3_256::default())),
         (HashType::SHA3, 384) => Ok(Box::new(sha3::Sha3_384::default())),
         (HashType::SHA3, 512) => Ok(Box::new(sha3::Sha3_512::default())),
-        _ => Err(format!("{:?} with length {} is invalid", &hash, bits)),
+        _ => Err(format_err!("{:?} with length {} is invalid", &hash, bits)),
     }
 }
