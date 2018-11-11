@@ -2,6 +2,7 @@
 name = "pincers"
 version = "0.1.0"
 authors = ["Greg Lutostanski <greg.lutostanski@mobilityhouse.com>"]
+description = "A more secure way to run scripts from the web"
 
 [dependencies]
 clap = "2.32.0"
