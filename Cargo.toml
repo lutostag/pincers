@@ -1,0 +1,9 @@
+[package]
+name = "pincers"
+version = "0.1.0"
+authors = ["Greg Lutostanski <greg.lutostanski@mobilityhouse.com>"]
+
+[dependencies]
+clap = "2.32.0"
+reqwest = "0.9.4"
+rust-crypto = "0.2.36"
