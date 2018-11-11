@@ -1,4 +1,4 @@
-use clap::{App, Arg, ArgMatches};
+use clap::{App, Arg, ArgGroup, ArgMatches};
 
 pub fn args<'a>() -> ArgMatches<'a> {
     App::new(crate_name!())
@@ -43,5 +43,6 @@ pub fn args<'a>() -> ArgMatches<'a> {
                 .help("Script to run")
                 .required(true)
                 .index(1),
-        ).get_matches()
+        ).group(ArgGroup::with_name("hash").args(&["md5", "sha1", "sha2", "sha3"]))
+        .get_matches()
 }
