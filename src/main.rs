@@ -15,7 +15,8 @@ use clap::ArgMatches;
 use digest::DynDigest;
 use hashing::{digest, HashType};
 use hex::encode;
-use std::io::Read;
+use std::io::{Read, Write};
+use std::process::{Command, Stdio};
 
 fn check_hash(args: &ArgMatches) -> Result<Box<DynDigest>, String> {
     let hash = if args.is_present("md5") {
@@ -36,6 +37,20 @@ fn check_hash(args: &ArgMatches) -> Result<Box<DynDigest>, String> {
     }
 }
 
+fn run(downloaded: &Vec<u8>) {
+    let mut child = Command::new("sh")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::inherit())
+        .spawn()
+        .expect("Failed to spawn child process");
+
+    {
+        let stdin = child.stdin.as_mut().expect("Failed to open stdin");
+        stdin.write_all(downloaded).expect("Failed to write to stdin");
+    }
+
+}
+
 fn main() -> Result<(), String> {
     let args = cli::args();
     let mut digest = check_hash(&args)?;
@@ -47,7 +62,11 @@ fn main() -> Result<(), String> {
             response.read_to_end(&mut body).expect("Could not read URL");
             digest.input(&body);
             let calculated = encode(digest.result());
-            println!("{}", calculated);
+            println!("Hash of downloaded script: {}", calculated);
+            match calculated.eq_ignore_ascii_case(args.value_of("hash").unwrap()) {
+                true => { println!("Hash matches"); run(&body)},
+                false => println!("Hash does not match"),
+            }
         }
     }
     Ok(())
