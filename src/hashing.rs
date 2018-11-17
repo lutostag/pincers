@@ -15,7 +15,7 @@ pub enum HashType {
 
 fn hex_bits(sum: &str) -> Result<u16, Error> {
     if let Some(c) = sum.chars().find(|c| !c.is_digit(16)) {
-        Err(format_err!("Non hexdigit {} found in checksum", c))
+        bail!("Non hexdigit {} found in checksum", c)
     } else {
         Ok(sum.len() as u16 * 4)
     }
@@ -34,6 +34,11 @@ pub fn digest(hash: HashType, sum: &str) -> Result<Box<DynDigest>, Error> {
         (HashType::SHA3, 256) => Ok(Box::new(sha3::Sha3_256::default())),
         (HashType::SHA3, 384) => Ok(Box::new(sha3::Sha3_384::default())),
         (HashType::SHA3, 512) => Ok(Box::new(sha3::Sha3_512::default())),
-        _ => Err(format_err!("{:?} with length {} is invalid", &hash, bits)),
+        _ => bail!(
+            "{:?} with length {} ({} bits) is invalid; double check entered checksum",
+            &hash,
+            sum.len(),
+            bits
+        ),
     }
 }
