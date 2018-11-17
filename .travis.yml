@@ -39,7 +39,7 @@ script:
 before_deploy:
   - set -e
   - cross build --target $TARGET --release
-  - cp target/$TARGET/release/pincers $src/$CRATE_NAME-$TRAVIS_TAG-$TARGET
+  - cp target/$TARGET/release/pincers $CRATE_NAME-$TRAVIS_TAG-$TARGET
 
 deploy:
   api_key:
