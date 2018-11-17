@@ -24,7 +24,7 @@ use hex::encode;
 use log::Level;
 use simplelog::{Config, LevelFilter, TermLogger};
 use std::io::{Read, Write};
-use std::process::{Command, Stdio};
+use std::process::{Command, ExitStatus, Stdio};
 
 fn hash_instance(args: &ArgMatches) -> Result<Box<DynDigest>, Error> {
     let hash = if args.is_present("md5") {
@@ -69,17 +69,22 @@ fn check_hash(mut digest: Box<DynDigest>, body: &Vec<u8>, known: &str) -> bool {
     calculated.eq_ignore_ascii_case(known)
 }
 
-fn exec(command: &str, downloaded: &Vec<u8>) -> Result<(), Error> {
+fn exec(command: &str, downloaded: &Vec<u8>) -> Result<ExitStatus, Error> {
     info!("Starting command '{}'", command);
     let mut child = Command::new(command)
         .stdin(Stdio::piped())
         .stdout(Stdio::inherit())
         .spawn()?;
 
-    debug!("Piping in script contents to command");
-    let stdin = child.stdin.as_mut().expect("Cannot open stdin");
-    stdin.write_all(downloaded)?;
-    Ok(())
+    {
+        debug!("Piping in script contents to command");
+        let stdin = child.stdin.as_mut().expect("Cannot open stdin");
+        stdin.write_all(downloaded)?;
+    }
+
+    let status = child.wait()?;
+    debug!("Script finished with exit status: {}", status);
+    Ok(status)
 }
 
 fn setup_logging(verbosity: u64) -> Result<(), simplelog::TermLogError> {
@@ -94,7 +99,7 @@ fn setup_logging(verbosity: u64) -> Result<(), simplelog::TermLogError> {
     TermLogger::init(log_level, config)
 }
 
-fn run() -> Result<(), Error> {
+fn run() -> Result<ExitStatus, Error> {
     let args = cli::args();
     setup_logging(args.occurrences_of("v"))?;
     let digest = hash_instance(&args)?;
@@ -103,17 +108,22 @@ fn run() -> Result<(), Error> {
         let data = download(&url)?;
         if check_hash(digest, &data, &checksum) {
             info!("Checksum matches");
-            exec("sh", &data)?;
+            return Ok(exec("sh", &data)?);
         } else {
             bail!("Checksum does not match");
         }
+    } else {
+        bail!("URL required");
     }
-    Ok(())
 }
 
 fn main() {
-    if let Err(err) = run() {
+    let status = run();
+    if let Err(err) = status {
         error!("{}", err);
         std::process::exit(1);
+    }
+    if let Some(code) = status.unwrap().code() {
+        std::process::exit(code);
     }
 }
