@@ -1,9 +1,10 @@
 [package]
 name = "pincers"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Greg Lutostanski <greg.lutostanski@mobilityhouse.com>"]
 description = "A more secure way to run scripts from the web"
 license = "MIT"
+readme = "README.md"
 repository = "https://github.com/lutostag/pincers"
 keywords = ["crypto", "hash", "digest", "install", "shell"]
 

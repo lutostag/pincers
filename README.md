@@ -1,10 +1,14 @@
 # pincers
-A more secure way to run scripts from the web
+[![Build Status](https://travis-ci.org/lutostag/pincers.svg?branch=master)](https://travis-ci.org/lutostag/pincers) ![Crates.io](https://img.shields.io/crates/v/pincers.svg)
+
+*A more secure way to run scripts from the web*
 
 Because `curl | sh` or `wget | sh` is a little to cowboy for the world we live in.
 Use cryptographic hashes to check what is downloaded is what you expect _before_ you run the script.
 
 ## Notes
+Just because a script from the internet has a checksum, does make it safe or good. It only ensures that all people will get the same version. I would suggest reading and understanding any script from a third party you do not fully trust *before* running it on your machine.
+
 The SHA-1 and MD5 hashes are included so as to work with all widely used hashes. However, these particular hashes have practical demonstrable attacks and should be avoided if at all possible.
 
 
