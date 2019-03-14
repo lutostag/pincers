@@ -4,6 +4,11 @@ extern crate clap;
 extern crate failure;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate lazy_static;
+#[macro_use]
+extern crate maplit;
+
 extern crate digest;
 extern crate hex;
 extern crate md5;
@@ -15,75 +20,65 @@ extern crate simplelog;
 
 mod cli;
 mod hashing;
+mod read;
 
-use clap::ArgMatches;
 use digest::DynDigest;
 use failure::Error;
-use hashing::{digest, HashType};
+use hashing::{digest, hex_bits, HashType};
 use hex::encode;
 use log::Level;
+use read::download;
 use simplelog::{Config, LevelFilter, TermLogger};
-use std::io::{Read, Write};
+use std::io::Write;
 use std::process::{Command, ExitStatus, Stdio};
 
-fn hash_instance(args: &ArgMatches) -> Result<Box<DynDigest>, Error> {
-    let hash = if args.is_present("md5") {
-        warn!(
-            "MD5 is not considered secure, please use a more secure checksum algorithm if possible"
-        );
-        Some(HashType::MD5)
-    } else if args.is_present("sha1") {
-        warn!("SHA-1 is not considered secure, please use a more secure checksum algorithm if possible");
-        Some(HashType::SHA1)
-    } else if args.is_present("sha2") {
-        Some(HashType::SHA2)
-    } else if args.is_present("sha3") {
-        Some(HashType::SHA3)
-    } else {
-        None
+fn hash_instance(algo: &str, sum: &Option<&str>) -> Result<Box<DynDigest>, Error> {
+    let algo = match algo {
+        "MD5" => {
+            warn!("MD5 is not considered secure, please use a more secure checksum algorithm if possible");
+            HashType::MD5
+        }
+        "SHA1" => {
+            warn!("SHA-1 is not considered secure, please use a more secure checksum algorithm if possible");
+            HashType::SHA1
+        }
+        "SHA2" => HashType::SHA2,
+        "SHA3" => HashType::SHA3,
+        _ => bail!("No checksum provided to verify against"),
     };
-    if let Some(sum) = args.value_of("hash") {
-        digest(hash.unwrap(), &sum)
-    } else {
-        bail!("No checksum provided to verify against")
-    }
+    let bits = match sum {
+        Some(x) => Some(hex_bits(x)?),
+        None => None,
+    };
+    digest(algo, bits)
 }
 
-fn download(url: &str) -> Result<Vec<u8>, Error> {
-    info!("Getting script: {}", url);
-    let mut body = Vec::<u8>::new();
-    reqwest::get(url)?
-        .error_for_status()?
-        .read_to_end(&mut body)?;
-    debug!(
-        "Downloaded script contents\n{}",
-        std::str::from_utf8(&body)?
-    );
-    Ok(body)
-}
-
-fn check_hash(mut digest: Box<DynDigest>, body: &[u8], known: &str) -> bool {
+fn compute_hash(mut digest: Box<DynDigest>, body: &[u8]) -> String {
     digest.input(body);
-    let calculated = encode(digest.result());
-    info!("Hash of downloaded script: {}", calculated);
-    calculated.eq_ignore_ascii_case(known)
+    let computed = encode(digest.result());
+    info!("Hash: {}", &computed);
+    computed
+}
+
+fn check_hash(computed: &str, expected: &str) -> bool {
+    computed.eq_ignore_ascii_case(expected)
 }
 
 fn exec(command: &str, downloaded: &[u8]) -> Result<ExitStatus, Error> {
-    info!("Starting command  2'{}'", command);
+    info!("Starting command '{}'", command);
     let mut child = Command::new(command)
         .stdin(Stdio::piped())
         .stdout(Stdio::inherit())
         .spawn()?;
 
     {
-        debug!("Piping in script contents to command");
+        debug!("Piping in contents to command");
         let stdin = child.stdin.as_mut().expect("Cannot open stdin");
         stdin.write_all(downloaded)?;
     }
 
     let status = child.wait()?;
-    debug!("Script finished with exit status: {}", status);
+    debug!("Finished running with exit status: {}", status);
     Ok(status)
 }
 
@@ -100,21 +95,25 @@ fn setup_logging(verbosity: u64) -> Result<(), simplelog::TermLogError> {
 }
 
 fn run() -> Result<ExitStatus, Error> {
-    let args = cli::args();
+    let clap = cli::args();
+    let args = clap.get_matches();
     setup_logging(args.occurrences_of("v"))?;
-    let digest = hash_instance(&args)?;
-    let checksum = args.value_of("hash").unwrap();
-    if let Some(url) = args.value_of("URL") {
-        let data = download(&url)?;
-        if check_hash(digest, &data, &checksum) {
-            info!("Checksum matches");
-            return Ok(exec("sh", &data)?);
-        } else {
-            bail!("Checksum does not match");
+    if let (_command, Some(args)) = args.subcommand() {
+        let checksum = args.value_of("HASH");
+        let digest = hash_instance(&args.value_of("ALGO").unwrap(), &checksum)?;
+        if let Some(url) = args.value_of("URL") {
+            let data = download(&url)?;
+            let computed = compute_hash(digest, &data);
+            if check_hash(&computed, &checksum.unwrap()) {
+                info!("Checksum matches");
+                return Ok(exec("sh", &data)?);
+            } else {
+                bail!("Checksum does not match");
+            }
         }
-    } else {
-        bail!("URL required");
     }
+    println!("{}", String::from(args.usage()));
+    std::process::exit(2);
 }
 
 fn main() {
