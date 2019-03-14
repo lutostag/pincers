@@ -62,15 +62,15 @@ fn download(url: &str) -> Result<Vec<u8>, Error> {
     Ok(body)
 }
 
-fn check_hash(mut digest: Box<DynDigest>, body: &Vec<u8>, known: &str) -> bool {
+fn check_hash(mut digest: Box<DynDigest>, body: &[u8], known: &str) -> bool {
     digest.input(body);
     let calculated = encode(digest.result());
     info!("Hash of downloaded script: {}", calculated);
     calculated.eq_ignore_ascii_case(known)
 }
 
-fn exec(command: &str, downloaded: &Vec<u8>) -> Result<ExitStatus, Error> {
-    info!("Starting command '{}'", command);
+fn exec(command: &str, downloaded: &[u8]) -> Result<ExitStatus, Error> {
+    info!("Starting command  2'{}'", command);
     let mut child = Command::new(command)
         .stdin(Stdio::piped())
         .stdout(Stdio::inherit())
