@@ -1,4 +1,4 @@
-use clap::{App, Arg, SubCommand};
+use clap::{App, AppSettings, Arg, SubCommand};
 pub fn args<'a, 'b>() -> App<'a, 'b> {
     let url = Arg::with_name("URL")
         .required(true)
@@ -14,6 +14,7 @@ pub fn args<'a, 'b>() -> App<'a, 'b> {
         .help("Expected checksum in hexadecimal");
 
     App::new(crate_name!())
+        .setting(AppSettings::SubcommandRequiredElseHelp)
         .version(crate_version!())
         .author(crate_authors!())
         .about(crate_description!())
@@ -23,12 +24,24 @@ pub fn args<'a, 'b>() -> App<'a, 'b> {
                 .multiple(true)
                 .help("Sets the level of verbosity"),
         )
-        .subcommand(SubCommand::with_name("run").arg(&url).arg(&algo).arg(&hash))
+        .subcommand(
+            SubCommand::with_name("hash")
+                .arg(&url)
+                .arg(algo.clone().default_value("SHA3"))
+                .about("Generate a checksum for the given input"),
+        )
         .subcommand(
             SubCommand::with_name("verify")
                 .arg(&url)
                 .arg(&algo)
-                .arg(&hash),
+                .arg(&hash)
+                .about("Verify the checksum matches the given input"),
         )
-        .subcommand(SubCommand::with_name("hash").arg(&url).arg(&algo))
+        .subcommand(
+            SubCommand::with_name("run")
+                .arg(&url)
+                .arg(&algo)
+                .arg(&hash)
+                .about("Run the given script if the checksum matches"),
+        )
 }

@@ -60,7 +60,7 @@ fn compute_hash(mut digest: Box<DynDigest>, body: &[u8]) -> String {
     computed
 }
 
-fn check_hash(computed: &str, expected: &str) -> bool {
+fn hash_matches(computed: &str, expected: &str) -> bool {
     computed.eq_ignore_ascii_case(expected)
 }
 
@@ -94,35 +94,49 @@ fn setup_logging(verbosity: u64) -> Result<(), simplelog::TermLogError> {
     TermLogger::init(log_level, config)
 }
 
-fn run() -> Result<ExitStatus, Error> {
-    let clap = cli::args();
-    let args = clap.get_matches();
+fn run(args: clap::ArgMatches) -> Result<Option<ExitStatus>, Error> {
     setup_logging(args.occurrences_of("v"))?;
-    if let (_command, Some(args)) = args.subcommand() {
+    if let (command, Some(args)) = args.subcommand() {
         let checksum = args.value_of("HASH");
-        let digest = hash_instance(&args.value_of("ALGO").unwrap(), &checksum)?;
-        if let Some(url) = args.value_of("URL") {
-            let data = download(&url)?;
-            let computed = compute_hash(digest, &data);
-            if check_hash(&computed, &checksum.unwrap()) {
+        let url = args.value_of("URL");
+        let algo = args.value_of("ALGO");
+        let digest = hash_instance(&algo.unwrap(), &checksum)?;
+        if url.is_none() {
+            bail!("No URL/filename given")
+        }
+        let data = download(&url.unwrap())?;
+        let computed = compute_hash(digest, &data);
+        match command {
+            "hash" => {
+                println!("{} {} {}", &url.unwrap(), &algo.unwrap(), &computed);
+                return Ok(None);
+            }
+            "verify" if hash_matches(&computed, &checksum.unwrap()) => {
                 info!("Checksum matches");
-                return Ok(exec("sh", &data)?);
-            } else {
+                return Ok(None);
+            }
+            "run" if hash_matches(&computed, &checksum.unwrap()) => {
+                info!("Checksum matches");
+                return Ok(Some(exec("sh", &data)?));
+            }
+            _ => {
                 bail!("Checksum does not match");
             }
         }
+    } else {
+        bail!("No valid subcommand given");
     }
-    println!("{}", String::from(args.usage()));
-    std::process::exit(2);
 }
 
 fn main() {
-    let status = run();
-    if let Err(err) = status {
-        error!("{}", err);
-        std::process::exit(1);
-    }
-    if let Some(code) = status.unwrap().code() {
-        std::process::exit(code);
-    }
+    let status = run(cli::args().get_matches());
+    let exit_code = match status {
+        Err(err) => {
+            error!("{}", err);
+            1
+        }
+        Ok(Some(exit_status)) => exit_status.code().unwrap_or(1),
+        Ok(None) => 0,
+    };
+    std::process::exit(exit_code)
 }
