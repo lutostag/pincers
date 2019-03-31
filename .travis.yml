@@ -15,7 +15,7 @@ matrix:
     - env: TARGET=arm-unknown-linux-gnueabi
     - env: TARGET=x86_64-unknown-linux-gnu
     - env: TARGET=x86_64-unknown-linux-musl
-    - env: TARGET=x86_64-pc-windows-gnu
+    - env: TARGET=x86_64-pc-windows-msvc
       os: windows
     # env: TARGET=x86_64-unknown-freebsd
     # env: TARGET=x86_64-unknown-netbsd
@@ -31,15 +31,17 @@ matrix:
 
 before_install:
   - rustup self update
-  - which cross 2>/dev/null || cargo install cross
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then which cross 2>/dev/null || cargo install cross; fi
 
 script:
   - rustup target install $TARGET || true
-  - cross test --target $TARGET
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cross test --target $TARGET; fi
+  - if [[ "$TRAVIS_OS_NAME" != "linux" ]]; then cargo test --target $TARGET; fi
 
 before_deploy:
   - set -e
-  - cross build --target $TARGET --release
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cross build --target $TARGET --release; fi
+  - if [[ "$TRAVIS_OS_NAME" != "linux" ]]; then cargo build --target $TARGET --release; fi
   - cp target/$TARGET/release/pincers $CRATE_NAME-$TRAVIS_TAG-$TARGET
 
 deploy:
