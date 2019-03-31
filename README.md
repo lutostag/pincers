@@ -13,32 +13,35 @@ The SHA-1 and MD5 hashes are included so as to work with all widely used hashes.
 
 
 ## Examples
-`$ pincers --sha3 962309203a6dd66167d09558326176175894cdd0809edb950442c910cee868a2 https://sh.rustup.rs`
+`$ pincers run https://sh.rustup.rs SHA3 0d420ca95887750de3b95326262cd05911f9c734a82ef66a3280eaa9c738621336321ee0ab0b146279e3dcd01b0134ddac97e2913ce102c344b63bef5cf0b4a9`
 
-`$ pincers --sha2 bb7e8f51023ab8b054c6578591fa0dc361ceeb08744e5cd1f0e551235c4912b2 https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh`
+`$ pincers run https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh SHA2 bb7e8f51023ab8b054c6578591fa0dc361ceeb08744e5cd1f0e551235c4912b2`
+
+`$ pincers hash https://www.opscode.com/chef/install.sh SHA2`
+
+`$ pincers hash https://nixos.org/nix/install SHA1`
+
+`$ pincers verify https://imgs.xkcd.com/comics/universal_install_script.png SHA3 f855bf08017a89c7d4755df6d909f9f86e4a7cd488470eb27b90f9e22048e451f8d1ec4481fdc44518cfaa709ecde20c67e453d6c2865275fd861664527714d2`
 
 ## Usage
 ```
-pincers 0.1.0
+pincers 0.2.0
 Greg Lutostanski <greg.lutostanski@mobilityhouse.com>
 A more secure way to run scripts from the web
 
 USAGE:
-    pincers [FLAGS] [OPTIONS] <URL> <--md5 <MD5>|--sha1 <SHA1>|--sha2 <SHA2>|--sha3 <SHA3>>
+    pincers [FLAGS] <SUBCOMMAND>
 
 FLAGS:
     -h, --help       Prints help information
     -v               Sets the level of verbosity
     -V, --version    Prints version information
 
-OPTIONS:
-    -m, --md5 <MD5>      MD5 checksum
-    -1, --sha1 <SHA1>    SHA1 checksum
-    -2, --sha2 <SHA2>    SHA2 checksum
-    -3, --sha3 <SHA3>    SHA3 checksum
-
-ARGS:
-    <URL>    Script to run
+SUBCOMMANDS:
+    hash      Generate a checksum for the given input
+    help      Prints this message or the help of the given subcommand(s)
+    run       Run the given script if the checksum matches
+    verify    Verify the checksum matches the given input
 ```
 
 ## Install
