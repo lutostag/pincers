@@ -37,6 +37,7 @@ script:
   - rustup target install $TARGET || true
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cross test --target $TARGET; fi
   - if [[ "$TRAVIS_OS_NAME" != "linux" ]]; then cargo test --target $TARGET; fi
+  - rvm list
 
 before_deploy:
   - set -e
