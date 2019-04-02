@@ -38,6 +38,8 @@ script:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cross test --target $TARGET; fi
   - if [[ "$TRAVIS_OS_NAME" != "linux" ]]; then cargo test --target $TARGET; fi
   - rvm list
+  - travis_internal_ruby
+  - rvm $(travis_internal_ruby) --fuzzy do ruby -S gem install dpl
 
 before_deploy:
   - set -e
