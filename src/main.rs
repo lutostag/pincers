@@ -64,9 +64,10 @@ fn hash_matches(computed: &str, expected: &str) -> bool {
     computed.eq_ignore_ascii_case(expected)
 }
 
-fn exec(command: &str, downloaded: &[u8]) -> Result<ExitStatus, Error> {
-    info!("Starting command '{}'", command);
+fn exec(command: &str, args: Vec<&str>, downloaded: &[u8]) -> Result<ExitStatus, Error> {
+    info!("Starting command '{}' with args {:?}", command, args);
     let mut child = Command::new(command)
+        .args(args)
         .stdin(Stdio::piped())
         .stdout(Stdio::inherit())
         .spawn()?;
@@ -108,6 +109,11 @@ fn run(args: clap::ArgMatches) -> Result<Option<ExitStatus>, Error> {
         match command {
             "hash" => {
                 println!("{} {} {}", &url.unwrap(), &algo.unwrap(), &computed);
+                if !args.is_present("quiet") {
+                    let pager = args.value_of("command").unwrap();
+                    let (pager, args) = cli::arg_resplit(pager, None);
+                    exec(pager, args, &data)?;
+                }
                 return Ok(None);
             }
             "verify" if hash_matches(&computed, &checksum.unwrap()) => {
@@ -116,7 +122,10 @@ fn run(args: clap::ArgMatches) -> Result<Option<ExitStatus>, Error> {
             }
             "run" if hash_matches(&computed, &checksum.unwrap()) => {
                 info!("Checksum matches");
-                return Ok(Some(exec("sh", &data)?));
+                let shell = args.value_of("command").unwrap();
+                let extra = args.values_of("extra");
+                let (shell, args) = cli::arg_resplit(shell, extra);
+                return Ok(Some(exec(shell, args, &data)?));
             }
             _ => {
                 bail!("Checksum does not match");
