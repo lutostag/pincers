@@ -38,7 +38,7 @@ pub fn args<'a, 'b>() -> App<'a, 'b> {
 
     let algo = Arg::with_name("ALGO")
         .help("Algorithm to use")
-        .possible_values(&["MD5", "SHA1", "SHA2", "SHA3"])
+        .possible_values(&["MD5", "SHA1", "SHA2", "SHA3", "GPG"])
         .required(true);
 
     let hash = Arg::with_name("HASH")

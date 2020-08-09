@@ -21,7 +21,7 @@ pub fn hex_bits(sum: &str) -> Result<u16, Error> {
     }
 }
 
-pub fn digest(hash: HashType, bits: Option<u16>) -> Result<Box<DynDigest>, Error> {
+pub fn digest(hash: HashType, bits: Option<u16>) -> Result<Box<dyn DynDigest>, Error> {
     match (hash, bits) {
         (HashType::MD5, Some(128)) => Ok(Box::new(md5::Md5::default())),
         (HashType::MD5, None) => Ok(Box::new(md5::Md5::default())),

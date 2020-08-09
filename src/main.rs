@@ -10,6 +10,7 @@ extern crate lazy_static;
 extern crate maplit;
 
 extern crate digest;
+extern crate gpgrv;
 extern crate hex;
 extern crate md5;
 extern crate reqwest;
@@ -19,6 +20,7 @@ extern crate sha3;
 extern crate simplelog;
 
 mod cli;
+mod gpg;
 mod hashing;
 mod read;
 
@@ -32,7 +34,7 @@ use simplelog::{Config, LevelFilter, TermLogger};
 use std::io::Write;
 use std::process::{Command, ExitStatus, Stdio};
 
-fn hash_instance(algo: &str, sum: &Option<&str>) -> Result<Box<DynDigest>, Error> {
+fn hash_instance(algo: &str, sum: &Option<&str>) -> Result<Box<dyn DynDigest>, Error> {
     let algo = match algo {
         "MD5" => {
             warn!("MD5 is not considered secure, please use a more secure checksum algorithm if possible");
@@ -53,7 +55,7 @@ fn hash_instance(algo: &str, sum: &Option<&str>) -> Result<Box<DynDigest>, Error
     digest(algo, bits)
 }
 
-fn compute_hash(mut digest: Box<DynDigest>, body: &[u8]) -> String {
+fn compute_hash(mut digest: Box<dyn DynDigest>, body: &[u8]) -> String {
     digest.input(body);
     let computed = encode(digest.result());
     info!("Hash: {}", &computed);
@@ -95,41 +97,62 @@ fn setup_logging(verbosity: u64) -> Result<(), simplelog::TermLogError> {
     TermLogger::init(log_level, config)
 }
 
+fn command_run(args: &clap::ArgMatches, data: &[u8]) -> Result<Option<ExitStatus>, Error> {
+    let shell = args.value_of("command").unwrap();
+    let extra = args.values_of("extra");
+    let (shell, args) = cli::arg_resplit(shell, extra);
+    Ok(Some(exec(shell, args, data)?))
+}
+
 fn run(args: clap::ArgMatches) -> Result<Option<ExitStatus>, Error> {
     if let (command, Some(args)) = args.subcommand() {
         let url = args.value_of("URL");
         let algo = args.value_of("ALGO");
         let checksum = args.value_of("HASH");
-        let digest = hash_instance(&algo.unwrap(), &checksum)?;
         if url.is_none() {
             bail!("No URL/filename given")
         }
         let data = download(&url.unwrap())?;
-        let computed = compute_hash(digest, &data);
+
         match command {
+            "hash" if algo == Some("GPG") => {
+                bail!("GPG signatures cannot be created, only verified")
+            }
+            "verify" | "run" if algo == Some("GPG") => {
+                gpg::verify(&data, &checksum.unwrap())?;
+                info!("Signature verified");
+                if command == "run" {
+                    command_run(args, &data)
+                } else {
+                    Ok(None)
+                }
+            }
             "hash" => {
+                let digest = hash_instance(&algo.unwrap(), &checksum)?;
+                let computed = compute_hash(digest, &data);
                 println!("{} {} {}", &url.unwrap(), &algo.unwrap(), &computed);
                 if !args.is_present("quiet") {
                     let pager = args.value_of("command").unwrap();
                     let (pager, args) = cli::arg_resplit(pager, None);
                     exec(pager, args, &data)?;
                 }
-                return Ok(None);
+                Ok(None)
             }
-            "verify" if hash_matches(&computed, &checksum.unwrap()) => {
-                info!("Checksum matches");
-                return Ok(None);
+            "verify" | "run" => {
+                let digest = hash_instance(&algo.unwrap(), &checksum)?;
+                let computed = compute_hash(digest, &data);
+                if hash_matches(&computed, &checksum.unwrap()) {
+                    info!("Checksum matches");
+                    if command == "run" {
+                        command_run(args, &data)
+                    } else {
+                        Ok(None)
+                    }
+                } else {
+                    bail!("Checksum does not match")
+                }
             }
-            "run" if hash_matches(&computed, &checksum.unwrap()) => {
-                info!("Checksum matches");
-                let shell = args.value_of("command").unwrap();
-                let extra = args.values_of("extra");
-                let (shell, args) = cli::arg_resplit(shell, extra);
-                return Ok(Some(exec(shell, args, &data)?));
-            }
-            _ => {
-                bail!("Checksum does not match");
-            }
+            _ => bail!("Unknown command"),
         }
     } else {
         bail!("No valid subcommand given");

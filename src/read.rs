@@ -34,6 +34,9 @@ pub fn download(url: &str) -> Result<Vec<u8>, Error> {
         debug!("Trying to read from local {}", &url);
         File::open(url)?.read_to_end(&mut body)?;
     };
-    debug!("Read contents\n{}", std::str::from_utf8(&body)?);
+    match std::str::from_utf8(&body) {
+        Ok(val) => debug!("Read contents\n{}", val),
+        Err(_) => debug!("Read content is binary"),
+    }
     Ok(body)
 }
