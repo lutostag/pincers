@@ -1,12 +1,12 @@
 use failure::Error;
-use gpgrv;
+use gpgrv::Keyring;
 use std::io::BufRead;
 
 mod http;
 mod keybase;
 mod local;
 
-fn add_key(keyring: &mut gpgrv::Keyring, mut from: Box<dyn BufRead>) -> Result<(), Error> {
+fn add_key(keyring: &mut Keyring, mut from: Box<dyn BufRead>) -> Result<(), Error> {
     let first_byte = {
         let head = from.fill_buf()?;
         ensure!(!head.is_empty(), "empty file");
@@ -20,7 +20,7 @@ fn add_key(keyring: &mut gpgrv::Keyring, mut from: Box<dyn BufRead>) -> Result<(
     Ok(())
 }
 
-pub fn add_key_from_url(keyring: &mut gpgrv::Keyring, url: &str) -> Result<(), Error> {
+pub fn add_key_from_url(keyring: &mut Keyring, url: &str) -> Result<(), Error> {
     let data = match url {
         _ if http::matches(url) => http::read(url)?,
         _ if keybase::matches(url) => keybase::read(url)?,
@@ -32,9 +32,7 @@ pub fn add_key_from_url(keyring: &mut gpgrv::Keyring, url: &str) -> Result<(), E
 
 #[test]
 fn it_works() {
-    println!(
-        "{:?}",
-        std::str::from_utf8(&get("keybase:lutostag").unwrap()).unwrap()
-    );
+    let mut keyring = Keyring::new();
+    add_key_from_url(&mut keyring, "keybase:lutostag").unwrap();
     assert_eq!(2 + 2, 4);
 }

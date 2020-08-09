@@ -2,9 +2,9 @@ use clap::{App, AppSettings, Arg, SubCommand, Values};
 
 pub fn arg_resplit<'a>(command: &'a str, extra: Option<Values<'a>>) -> (&'a str, Vec<&'a str>) {
     let mut split = command.split_whitespace();
-    let command = split.nth(0).expect("No command given");
+    let command = split.next().expect("No command given");
     let mut args = split.collect::<Vec<_>>();
-    let mut extra_args = extra.map(|s| s.collect()).unwrap_or(Vec::new());
+    let mut extra_args = extra.map(|s| s.collect()).unwrap_or_default();
     args.append(&mut extra_args);
     (command, args)
 }
@@ -18,16 +18,8 @@ pub fn args<'a, 'b>() -> App<'a, 'b> {
         .takes_value(true)
         .empty_values(false);
 
-    let pager = Arg::with_name("command")
-        .help("Command (pager) to vew the script with")
-        .short("c")
-        .default_value("less")
-        .env("PAGER")
-        .takes_value(true)
-        .empty_values(false);
-
     let quiet = Arg::with_name("quiet")
-        .help("Do not show the script")
+        .help("Do not save remote scripts for review when computing hashes")
         .long("quiet")
         .short("q")
         .takes_value(false);
@@ -67,21 +59,20 @@ pub fn args<'a, 'b>() -> App<'a, 'b> {
         .subcommand(
             SubCommand::with_name("hash")
                 .about("Generate a checksum for the given input")
-                .arg(&pager)
                 .arg(&quiet)
                 .arg(&url)
                 .arg(algo.clone().default_value("SHA3")),
         )
         .subcommand(
             SubCommand::with_name("verify")
-                .about("Verify the checksum matches the given input")
+                .about("Verify the checksum/signature matches the given input")
                 .arg(&url)
                 .arg(&algo)
                 .arg(&hash),
         )
         .subcommand(
             SubCommand::with_name("run")
-                .about("Run the given script if the checksum matches")
+                .about("Run the given script if the checksum/signature matches")
                 .arg(&shell)
                 .arg(&url)
                 .arg(&algo)

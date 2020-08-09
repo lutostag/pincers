@@ -18,6 +18,8 @@ extern crate sha1;
 extern crate sha2;
 extern crate sha3;
 extern crate simplelog;
+extern crate uuid;
+use uuid::Uuid;
 
 mod cli;
 mod gpg;
@@ -31,6 +33,8 @@ use hex::encode;
 use log::Level;
 use read::download;
 use simplelog::{Config, LevelFilter, TermLogger};
+use std::env;
+use std::fs::File;
 use std::io::Write;
 use std::process::{Command, ExitStatus, Stdio};
 
@@ -97,13 +101,6 @@ fn setup_logging(verbosity: u64) -> Result<(), simplelog::TermLogError> {
     TermLogger::init(log_level, config)
 }
 
-fn command_run(args: &clap::ArgMatches, data: &[u8]) -> Result<Option<ExitStatus>, Error> {
-    let shell = args.value_of("command").unwrap();
-    let extra = args.values_of("extra");
-    let (shell, args) = cli::arg_resplit(shell, extra);
-    Ok(Some(exec(shell, args, data)?))
-}
-
 fn run(args: clap::ArgMatches) -> Result<Option<ExitStatus>, Error> {
     if let (command, Some(args)) = args.subcommand() {
         let url = args.value_of("URL");
@@ -115,41 +112,46 @@ fn run(args: clap::ArgMatches) -> Result<Option<ExitStatus>, Error> {
         let data = download(&url.unwrap())?;
 
         match command {
-            "hash" if algo == Some("GPG") => {
-                bail!("GPG signatures cannot be created, only verified")
-            }
-            "verify" | "run" if algo == Some("GPG") => {
-                gpg::verify(&data, &checksum.unwrap())?;
-                info!("Signature verified");
-                if command == "run" {
-                    command_run(args, &data)
-                } else {
-                    Ok(None)
-                }
-            }
             "hash" => {
+                if algo == Some("GPG") {
+                    bail!("GPG signatures cannot be created, only verified with pincers")
+                }
                 let digest = hash_instance(&algo.unwrap(), &checksum)?;
                 let computed = compute_hash(digest, &data);
                 println!("{} {} {}", &url.unwrap(), &algo.unwrap(), &computed);
-                if !args.is_present("quiet") {
-                    let pager = args.value_of("command").unwrap();
-                    let (pager, args) = cli::arg_resplit(pager, None);
-                    exec(pager, args, &data)?;
+                if !args.is_present("quiet") && read::is_remote(&url.unwrap()) {
+                    let mut dir = env::temp_dir();
+                    dir.push(format!("pincers_{}.tmp", Uuid::new_v4()));
+                    let mut f = File::create(&dir)?;
+                    f.write_all(&data)?;
+                    println!(
+                        "# Please check the file contents are as expected, file available at {}",
+                        dir.as_path().display().to_string()
+                    );
                 }
                 Ok(None)
             }
             "verify" | "run" => {
-                let digest = hash_instance(&algo.unwrap(), &checksum)?;
-                let computed = compute_hash(digest, &data);
-                if hash_matches(&computed, &checksum.unwrap()) {
-                    info!("Checksum matches");
-                    if command == "run" {
-                        command_run(args, &data)
-                    } else {
-                        Ok(None)
+                if algo == Some("GPG") {
+                    if gpg::verify(&data, &checksum.unwrap()).is_err() {
+                        bail!("Signature invalid");
                     }
+                    info!("Signature verified");
                 } else {
-                    bail!("Checksum does not match")
+                    let digest = hash_instance(&algo.unwrap(), &checksum)?;
+                    let computed = compute_hash(digest, &data);
+                    if !hash_matches(&computed, &checksum.unwrap()) {
+                        bail!("Checksum invalid");
+                    }
+                    info!("Checksum verified");
+                }
+                if command == "run" {
+                    let shell = args.value_of("command").unwrap();
+                    let extra = args.values_of("extra");
+                    let (shell, args) = cli::arg_resplit(shell, extra);
+                    Ok(Some(exec(shell, args, &data)?))
+                } else {
+                    Ok(None)
                 }
             }
             _ => bail!("Unknown command"),

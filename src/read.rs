@@ -11,7 +11,7 @@ lazy_static! {
     };
 }
 
-fn is_remote(url: &str) -> bool {
+pub fn is_remote(url: &str) -> bool {
     if let Ok(url) = reqwest::Url::parse(url) {
         return REMOTE_SCHEMES.contains(&url.scheme());
     }
