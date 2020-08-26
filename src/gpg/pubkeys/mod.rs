@@ -1,4 +1,4 @@
-use failure::Error;
+use anyhow::Result;
 use gpgrv::Keyring;
 use std::io::BufRead;
 
@@ -6,7 +6,7 @@ mod http;
 mod keybase;
 mod local;
 
-fn add_key(keyring: &mut Keyring, mut from: Box<dyn BufRead>) -> Result<(), Error> {
+fn add_key(keyring: &mut Keyring, mut from: Box<dyn BufRead>) -> Result<()> {
     let first_byte = {
         let head = from.fill_buf()?;
         ensure!(!head.is_empty(), "empty file");
@@ -20,7 +20,7 @@ fn add_key(keyring: &mut Keyring, mut from: Box<dyn BufRead>) -> Result<(), Erro
     Ok(())
 }
 
-pub fn add_key_from_url(keyring: &mut Keyring, url: &str) -> Result<(), Error> {
+pub fn add_key_from_url(keyring: &mut Keyring, url: &str) -> Result<()> {
     let data = match url {
         _ if http::matches(url) => http::read(url)?,
         _ if keybase::matches(url) => keybase::read(url)?,

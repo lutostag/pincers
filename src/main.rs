@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate clap;
 #[macro_use]
-extern crate failure;
+extern crate anyhow;
 #[macro_use]
 extern crate log;
 #[macro_use]
@@ -26,8 +26,8 @@ mod gpg;
 mod hashing;
 mod read;
 
+use anyhow::Result;
 use digest::DynDigest;
-use failure::Error;
 use hashing::{digest, hex_bits, HashType};
 use hex::encode;
 use log::Level;
@@ -35,10 +35,10 @@ use read::download;
 use simplelog::{Config, LevelFilter, TermLogger};
 use std::env;
 use std::fs::File;
-use std::io::Write;
+use std::io::{Cursor, Write};
 use std::process::{Command, ExitStatus, Stdio};
 
-fn hash_instance(algo: &str, sum: &Option<&str>) -> Result<Box<dyn DynDigest>, Error> {
+fn hash_instance(algo: &str, sum: &Option<&str>) -> Result<Box<dyn DynDigest>> {
     let algo = match algo {
         "MD5" => {
             warn!("MD5 is not considered secure, please use a more secure checksum algorithm if possible");
@@ -70,7 +70,7 @@ fn hash_matches(computed: &str, expected: &str) -> bool {
     computed.eq_ignore_ascii_case(expected)
 }
 
-fn exec(command: &str, args: Vec<&str>, downloaded: &[u8]) -> Result<ExitStatus, Error> {
+fn exec(command: &str, args: Vec<&str>, downloaded: &[u8]) -> Result<ExitStatus> {
     info!("Starting command '{}' with args {:?}", command, args);
     let mut child = Command::new(command)
         .args(args)
@@ -101,7 +101,7 @@ fn setup_logging(verbosity: u64) -> Result<(), simplelog::TermLogError> {
     TermLogger::init(log_level, config)
 }
 
-fn run(args: clap::ArgMatches) -> Result<Option<ExitStatus>, Error> {
+fn run(args: clap::ArgMatches) -> Result<Option<ExitStatus>> {
     if let (command, Some(args)) = args.subcommand() {
         let url = args.value_of("URL");
         let algo = args.value_of("ALGO");
@@ -109,7 +109,7 @@ fn run(args: clap::ArgMatches) -> Result<Option<ExitStatus>, Error> {
         if url.is_none() {
             bail!("No URL/filename given")
         }
-        let data = download(&url.unwrap())?;
+        let data: Vec<u8> = download(&url.unwrap())?;
 
         match command {
             "hash" => {
@@ -133,8 +133,24 @@ fn run(args: clap::ArgMatches) -> Result<Option<ExitStatus>, Error> {
             }
             "verify" | "run" => {
                 if algo == Some("GPG") {
-                    if gpg::verify(&data, &checksum.unwrap()).is_err() {
-                        bail!("Signature invalid");
+                    let keyring = gpg::create_keyring(&checksum.unwrap())?;
+
+                    let sig = download(&format!("{}.sig", &url.unwrap()));
+                    if let Ok(sig_data) = sig {
+                        if gpg::verify_detached(
+                            Cursor::new(&sig_data),
+                            Cursor::new(&data),
+                            &keyring,
+                        )
+                        .is_err()
+                        {
+                            bail!("Found signature with invalid signature data");
+                        }
+                    }
+                    let mut new_data = vec![];
+                    if gpg::verify_message(Cursor::new(&data), &mut new_data, &keyring).is_err() {
+                        warn!("Signature invalid for inline signature, trying with .sig suffix");
+                        warn!("Signature invalid for inline signature, trying with .asc suffix");
                     }
                     info!("Signature verified");
                 } else {

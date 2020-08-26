@@ -1,4 +1,4 @@
-use failure::Error;
+use anyhow::Result;
 use reqwest;
 
 use std::collections::HashSet;
@@ -18,7 +18,7 @@ pub fn is_remote(url: &str) -> bool {
     false
 }
 
-pub fn download(url: &str) -> Result<Vec<u8>, Error> {
+pub fn download(url: &str) -> Result<Vec<u8>> {
     info!("Getting script: {}", url);
     let mut body = Vec::<u8>::new();
 

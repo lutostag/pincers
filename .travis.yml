@@ -31,7 +31,9 @@ matrix:
 
 before_install:
   - rustup self update
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then which cross 2>/dev/null || cargo install cross; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cargo install --version 0.1.16 cross; apt-get install upx; fi
+  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then choco install upx; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install upx; fi
 
 script:
   - rustup target install $TARGET || true
@@ -43,6 +45,7 @@ before_deploy:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cross build --target $TARGET --release; fi
   - if [[ "$TRAVIS_OS_NAME" != "linux" ]]; then cargo build --target $TARGET --release; fi
   - cp target/$TARGET/release/pincers $CRATE_NAME-$TRAVIS_TAG-$TARGET
+  - upx $CRATE_NAME-$TRAVIS_TAG-$TARGET*
 
 deploy:
   api_key:

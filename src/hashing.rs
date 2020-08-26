@@ -1,5 +1,5 @@
+use anyhow::Result;
 use digest::DynDigest;
-use failure::Error;
 use md5;
 use sha1;
 use sha2;
@@ -13,7 +13,7 @@ pub enum HashType {
     SHA3, // bits: 224, 256, 384, 512
 }
 
-pub fn hex_bits(sum: &str) -> Result<u16, Error> {
+pub fn hex_bits(sum: &str) -> Result<u16> {
     if let Some(c) = sum.chars().find(|c| !c.is_digit(16)) {
         bail!("Non hexdigit {} found in checksum", c)
     } else {
@@ -21,7 +21,7 @@ pub fn hex_bits(sum: &str) -> Result<u16, Error> {
     }
 }
 
-pub fn digest(hash: HashType, bits: Option<u16>) -> Result<Box<dyn DynDigest>, Error> {
+pub fn digest(hash: HashType, bits: Option<u16>) -> Result<Box<dyn DynDigest>> {
     match (hash, bits) {
         (HashType::MD5, Some(128)) => Ok(Box::new(md5::Md5::default())),
         (HashType::MD5, None) => Ok(Box::new(md5::Md5::default())),
