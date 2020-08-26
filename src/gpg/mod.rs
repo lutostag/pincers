@@ -1,7 +1,8 @@
-use anyhow::Result;
-use gpgrv::Keyring;
-
-pub use gpgrv::{verify_detached, verify_message};
+use crate::read::download;
+use anyhow::{Context, Result};
+use gpgrv::{verify_detached, verify_message, Keyring};
+use std::io::Cursor;
+use std::mem::replace;
 
 mod pubkeys;
 
@@ -11,18 +12,20 @@ pub fn create_keyring(gpg_key_url: &str) -> Result<Keyring> {
     Ok(keyring)
 }
 
-// pub fn verify_inline(input_file: &[u8], keyring: &Keyring) -> Result<(), Error> {
-//     gpgrv::verify_message(io::Cursor::new(input_file), vec![], keyring)
-// }
-//
-// pub fn verify_detached(
-//     signature: &[u8],
-//     input_file: &[u8],
-//     keyring: &Keyring,
-// ) -> Result<(), Error> {
-//     gpgrv::verify_detached(
-//         io::Cursor::new(signature),
-//         io::Cursor::new(input_file),
-//         keyring,
-//     )
-// }
+pub fn verify(url: &str, data: &mut Vec<u8>, keyring: &Keyring) -> Result<()> {
+    let mut new_data = vec![];
+    if verify_message(Cursor::new(&data), &mut new_data, &keyring).is_ok() {
+        let _ = replace(data, new_data); // if inline have to remove the signature itself
+    } else if let Ok(sig) = download(&format!("{}.sig", url)) {
+        info!("Found .sig file to match, attempting to verify signature");
+        verify_detached(Cursor::new(&sig), Cursor::new(&data), &keyring)
+            .context("Found .sig signature with invalid signature data")?;
+    } else if let Ok(asc) = download(&format!("{}.asc", url)) {
+        info!("Found .asc file to match, attempting to verify signature");
+        verify_detached(Cursor::new(&asc), Cursor::new(&data), &keyring)
+            .context("Found .asc signature with invalid signature data")?;
+    } else {
+        bail!("Signature not verified")
+    }
+    Ok(())
+}

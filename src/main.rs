@@ -35,7 +35,7 @@ use read::download;
 use simplelog::{Config, LevelFilter, TermLogger};
 use std::env;
 use std::fs::File;
-use std::io::{Cursor, Write};
+use std::io::Write;
 use std::process::{Command, ExitStatus, Stdio};
 
 fn hash_instance(algo: &str, sum: &Option<&str>) -> Result<Box<dyn DynDigest>> {
@@ -109,7 +109,7 @@ fn run(args: clap::ArgMatches) -> Result<Option<ExitStatus>> {
         if url.is_none() {
             bail!("No URL/filename given")
         }
-        let data: Vec<u8> = download(&url.unwrap())?;
+        let mut data: Vec<u8> = download(&url.unwrap())?;
 
         match command {
             "hash" => {
@@ -134,24 +134,7 @@ fn run(args: clap::ArgMatches) -> Result<Option<ExitStatus>> {
             "verify" | "run" => {
                 if algo == Some("GPG") {
                     let keyring = gpg::create_keyring(&checksum.unwrap())?;
-
-                    let sig = download(&format!("{}.sig", &url.unwrap()));
-                    if let Ok(sig_data) = sig {
-                        if gpg::verify_detached(
-                            Cursor::new(&sig_data),
-                            Cursor::new(&data),
-                            &keyring,
-                        )
-                        .is_err()
-                        {
-                            bail!("Found signature with invalid signature data");
-                        }
-                    }
-                    let mut new_data = vec![];
-                    if gpg::verify_message(Cursor::new(&data), &mut new_data, &keyring).is_err() {
-                        warn!("Signature invalid for inline signature, trying with .sig suffix");
-                        warn!("Signature invalid for inline signature, trying with .asc suffix");
-                    }
+                    gpg::verify(&url.unwrap(), &mut data, &keyring)?;
                     info!("Signature verified");
                 } else {
                     let digest = hash_instance(&algo.unwrap(), &checksum)?;
@@ -184,6 +167,8 @@ fn verify_matches() {
         vec!["SHA1", "b8aab367f895494d8452a5e89ccfa2b0acb13e90"],
         vec!["SHA2", "ac153c840ff6b48853eb5dca8ff3f5f4f48a7c5e73cc2ef9f50ec672ad670c22612492eae3b7100f51e3f5900ce18cb3ebabe5dbd9fb514d78b3cfa7306165ba"],
         vec!["SHA3", "8844273dccb5f098a14de9cd3cdf250f87693713e6911bcb103545edadae5d7965c14107f238e6e66847f38f471894c007b3cc862f794275809032bfe83d182c"],
+        vec!["GPG", "file://tests/fixtures/greg_pub.pub"],
+        vec!["GPG", "tests/fixtures/greg_pub.pub"],
     ];
     for hash in hashes {
         let cli = cli::args();
