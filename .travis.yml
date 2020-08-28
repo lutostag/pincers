@@ -41,9 +41,9 @@ script:
 
 before_deploy:
   - set -e
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cross build --target $TARGET --release; fi
-  - if [[ "$TRAVIS_OS_NAME" != "linux" ]]; then cargo build --target $TARGET --release; fi
-  - cp target/$TARGET/release/$CRATE_NAME* $CRATE_NAME-$TRAVIS_TAG-$TARGET
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cross build --target $TARGET --release; cp target/$TARGET/release/$CRATE_NAME $CRATE_NAME-$TRAVIS_TAG-$TARGET; fi
+  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then cargo build --target $TARGET --release; cp target/$TARGET/release/$CRATE_NAME.exe $CRATE_NAME-$TRAVIS_TAG-$TARGET.exe; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then cargo build --target $TARGET --release; cp target/$TARGET/release/$CRATE_NAME $CRATE_NAME-$TRAVIS_TAG-$TARGET; fi
   - upx $CRATE_NAME-$TRAVIS_TAG-$TARGET*
 
 deploy:
