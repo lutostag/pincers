@@ -4,7 +4,6 @@
 dist: xenial
 language: rust
 services: docker
-sudo: required
 
 env:
   global:
@@ -31,7 +30,7 @@ matrix:
 
 before_install:
   - rustup self update
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cargo install --version 0.1.16 cross; apt-get install upx; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cargo install --version 0.1.16 cross; sudo apt-get install -yq upx; fi
   - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then choco install upx; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install upx; fi
 
@@ -44,7 +43,7 @@ before_deploy:
   - set -e
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cross build --target $TARGET --release; fi
   - if [[ "$TRAVIS_OS_NAME" != "linux" ]]; then cargo build --target $TARGET --release; fi
-  - cp target/$TARGET/release/pincers $CRATE_NAME-$TRAVIS_TAG-$TARGET
+  - cp target/$TARGET/release/$CRATE_NAME* $CRATE_NAME-$TRAVIS_TAG-$TARGET
   - upx $CRATE_NAME-$TRAVIS_TAG-$TARGET*
 
 deploy:
