@@ -4,63 +4,64 @@
 dist: xenial
 language: rust
 services: docker
-
 env:
   global:
-    - CRATE_NAME=pincers
+  - CRATE_NAME=pincers
 
 matrix:
   include:
-    - env: TARGET=arm-unknown-linux-gnueabi
-    - env: TARGET=x86_64-unknown-linux-gnu
-    - env: TARGET=x86_64-unknown-linux-musl
-    - env: TARGET=x86_64-pc-windows-msvc
-      os: windows
-    # env: TARGET=x86_64-unknown-freebsd
-    # env: TARGET=x86_64-unknown-netbsd
-    - env: TARGET=x86_64-apple-darwin
-      os: osx
-
-    # Testing other channels
-    - env: TARGET=x86_64-unknown-linux-gnu
-      rust: nightly
-    - env: TARGET=x86_64-apple-darwin
-      os: osx
-      rust: nightly
+  - env: TARGET=arm-unknown-linux-gnueabi
+  - env: TARGET=x86_64-unknown-linux-gnu
+  - env: TARGET=x86_64-unknown-linux-musl
+  - env: TARGET=x86_64-pc-windows-msvc
+    os: windows
+  - env: TARGET=x86_64-apple-darwin
+    os: osx
+  - env: TARGET=x86_64-unknown-linux-gnu
+    rust: nightly
+  - env: TARGET=x86_64-apple-darwin
+    os: osx
+    rust: nightly
+# - env: TARGET=x86_64-unknown-freebsd
+# - env: TARGET=x86_64-unknown-netbsd
 
 before_install:
-  - rustup self update
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cargo install --version 0.1.16 cross; sudo apt-get install -yq upx; fi
-  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then choco install upx; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install upx; fi
+- rustup self update
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cargo install --version 0.1.16 cross;
+  sudo apt-get install -yq upx; fi
+- if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then choco install upx; fi
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install upx; fi
 
 script:
-  - rustup target install $TARGET || true
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cross test --target $TARGET; fi
-  - if [[ "$TRAVIS_OS_NAME" != "linux" ]]; then cargo test --target $TARGET; fi
+- rustup target install $TARGET || true
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cross test --target $TARGET; fi
+- if [[ "$TRAVIS_OS_NAME" != "linux" ]]; then cargo test --target $TARGET; fi
 
 before_deploy:
-  - set -e
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cross build --target $TARGET --release; cp target/$TARGET/release/$CRATE_NAME $CRATE_NAME-$TRAVIS_TAG-$TARGET; fi
-  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then cargo build --target $TARGET --release; cp target/$TARGET/release/$CRATE_NAME.exe $CRATE_NAME-$TRAVIS_TAG-$TARGET.exe; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then cargo build --target $TARGET --release; cp target/$TARGET/release/$CRATE_NAME $CRATE_NAME-$TRAVIS_TAG-$TARGET; fi
-  - upx $CRATE_NAME-$TRAVIS_TAG-$TARGET*
+- set -e
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cross build --target $TARGET --release;
+  cp target/$TARGET/release/$CRATE_NAME $CRATE_NAME-$TRAVIS_TAG-$TARGET; fi
+- if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then cargo build --target $TARGET --release;
+  cp target/$TARGET/release/$CRATE_NAME.exe $CRATE_NAME-$TRAVIS_TAG-$TARGET.exe; fi
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then cargo build --target $TARGET --release;
+  cp target/$TARGET/release/$CRATE_NAME $CRATE_NAME-$TRAVIS_TAG-$TARGET; fi
+- upx $CRATE_NAME-$TRAVIS_TAG-$TARGET*
 
 deploy:
+  provider: releases
   api_key:
-    secure: BocTJ0/GDqTbdKIF2RVr+4i4zQQZ/SLYIR6sWT+SwiwRT8vqKq4ke0ENtGY0YX5wJ8IAoKYHfubIg4c0UN2tj5ZjozJF/ZoefPpn4NycBqFudUdxEBIhO8LXBAjLWJmMlka96KB6i+vGtrBJH4bGz/bJviibNZ9Ubx7XQvKtWZ3gQLQHHEGiREP7eEZrC7zsjlfr9Vv8NvdcphbvsuanUMwnxRbDOEahjvxUS2sAX/CBfVFiAUt7oGJaOS3PiLoLTEt1yb9ViG7fU2mPrgDOxIx6MvQJ08Y90Jc+HFH670Sp+sh1GSHQXRas2wMlBO5/VB0LAFfyfPRp4MTvpjR8KngjlVDfSpSj2Aip0X/M+cWcpRrGxrDYg0DSh9d0yaidIVgaR2P4KNr+N/8G9OEVeiuP29CjvOTqt16l+m9nlpMKgssOP6XkM37WHVqgo9pRG71dt03/LE5msDW+umbsrQ9b2G1fLwZPllpN/7FeRG9MIKF90sBmqD0iIL9JOXpXOYSYCCtbm2Y80HmJW//VlmBlA2WbU1wCzixdmlQzHJ7tVmlXogXdjc2RElC9oiq6V8f25ddpGj4KkE/523tT5pkuCQ8RPflH8pHk2XXFvo28U7Jr12jMJD3KLUOr+pqJIONFJdMEZP8dC0/bNPPg6FBWtxOBGwAQcGc2ICxpYFk=
+    secure: SE2K7UOgygToN6HfOdYWCk3uck7k7HHJQ896HMe7vsZm2xyhjxDwelyBcTAd54Z3s+tB6EHJnqEhy8GOcx63jOzHLvQtL7ZP8DwtoBcQHGgin9QpXbRI1im9RAemcQKMP9gaQOagpK4gUx1DZ7wNNo2jL3moFgpwXa/ZjiuMCNlFeyLwdW4At11Uq8VIGQCJLchTA4SQwuykm4O5PKSwyUxOGeI48tYY45AsavFg86lOemGf5D2i28yx4GS/pcoHcjksCrcDRvsH2Invj3bv502t9vGBP06Ob1n10dBaIObdZoiUDslTeFj/cZeTaEGxSWvY8IND6TCvqOHUgm3Onel80ObcnkoDizJhRpKLplro/niq4ZIgr33EFCVcHCIihBD9GnjnS2E/Uya+rUSK5GX5o04SntWetxhBWgHkFJZxM2hpjV+2/RzsAY2/83xGfD2Y+C0ZL9i2Tm7Vj7giF2x62DXpKR9zBVPsz2orK20uRxNSX8OwBNpwovxXKw2ieDg4u8O8Wv+GEtWnRI0tEnvuDEwWRH/xTnT/0BnZF6uR5nADtCFEnZ8fwkdzXaCE/CvwKSTzH+lt5gOTETiASOdH+YsnIpW1c+2+vCU/710VzL1lcgXJjVhRfsITvz4NAVEFWXwv/QIuuQypl7YsU8didBqK1nJ9Anaz9wzb5zQ=
   file_glob: true
   file: $CRATE_NAME-$TRAVIS_TAG-$TARGET*
   on:
-    condition: $TRAVIS_RUST_VERSION = stable
+    repo: lutostag/pincers
     tags: true
-  provider: releases
+    condition: $TRAVIS_RUST_VERSION = stable
   skip_cleanup: true
 
 cache: cargo
 before_cache:
-  # Travis can't cache files that are not readable by "others"
-  - chmod -R a+r $HOME/.cargo
+- chmod -R a+r $HOME/.cargo
 
 notifications:
   email:
