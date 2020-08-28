@@ -163,16 +163,21 @@ fn run(args: clap::ArgMatches) -> Result<Option<ExitStatus>> {
 #[test]
 fn verify_matches() {
     let hashes = vec![
-        vec!["MD5", "be92ab994901c38365cf28a8874fc7c3"],
-        vec!["SHA1", "b8aab367f895494d8452a5e89ccfa2b0acb13e90"],
-        vec!["SHA2", "ac153c840ff6b48853eb5dca8ff3f5f4f48a7c5e73cc2ef9f50ec672ad670c22612492eae3b7100f51e3f5900ce18cb3ebabe5dbd9fb514d78b3cfa7306165ba"],
-        vec!["SHA3", "8844273dccb5f098a14de9cd3cdf250f87693713e6911bcb103545edadae5d7965c14107f238e6e66847f38f471894c007b3cc862f794275809032bfe83d182c"],
-        vec!["GPG", "file://tests/fixtures/greg_pub.pub"],
-        vec!["GPG", "tests/fixtures/greg_pub.pub"],
+        vec!["tests/fixtures/echo.sh", "MD5", "be92ab994901c38365cf28a8874fc7c3"],
+        vec!["tests/fixtures/echo.sh", "SHA1", "b8aab367f895494d8452a5e89ccfa2b0acb13e90"],
+        vec!["tests/fixtures/echo.sh", "SHA2", "ac153c840ff6b48853eb5dca8ff3f5f4f48a7c5e73cc2ef9f50ec672ad670c22612492eae3b7100f51e3f5900ce18cb3ebabe5dbd9fb514d78b3cfa7306165ba"],
+        vec!["tests/fixtures/echo.sh", "SHA3", "8844273dccb5f098a14de9cd3cdf250f87693713e6911bcb103545edadae5d7965c14107f238e6e66847f38f471894c007b3cc862f794275809032bfe83d182c"],
+        vec!["tests/fixtures/echo.sh", "GPG", "tests/fixtures/lutostag.pub"],
+        vec!["tests/fixtures/echo.sh", "GPG", "tests/fixtures/lutostag.pub"],
+        vec!["tests/fixtures/echo.sh", "GPG", "tests/fixtures/lutostag.pub"],
+        vec!["tests/fixtures/echo.sh", "GPG", "tests/fixtures/lutostag.pub"],
+        vec!["tests/fixtures/return-code.sh", "GPG", "file://tests/fixtures/lutostag.pub"],
+        vec!["tests/fixtures/long.sh.gpg", "GPG", "https://keybase.io/lutostag/pgp_keys.asc"],
+        vec!["tests/fixtures/input.sh.asc", "GPG", "keybase:lutostag"],
     ];
     for hash in hashes {
         let cli = cli::args();
-        let mut args = vec!["pincers", "verify", "tests/fixtures/echo.sh"];
+        let mut args = vec!["pincers", "verify"];
         args.extend_from_slice(&hash);
         assert!(run(cli.get_matches_from(args)).unwrap().is_none());
     }
@@ -186,6 +191,7 @@ fn verify_not_matches() {
         vec!["SHA1", "0000000000000000000000000000000000000000"],
         vec!["SHA2", "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"],
         vec!["SHA3", "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"],
+        vec!["GPG", "keybase:max"],
     ];
     for hash in hashes {
         let cli = cli::args();
